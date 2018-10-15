@@ -5,7 +5,7 @@ function [ out ] = apply_filterbank( BB, AA, in)
 %   matrix of signals (Nsamples X Nsignals).
 %   The output out is a matrix Nsamples X Nsignals X Nchannels
 %
-% Leo Varnet and Andrew King 2016
+% Leo Varnet and Andrew King - 2016
 
 Nchannels=size(BB,1);
 if size(AA,1)~= Nchannels
@@ -23,5 +23,5 @@ out=zeros(Nsamples,Nsignals,Nchannels);
 for ii=1:Nchannels
     res = filter(BB(ii,:),AA(ii,:),in);
     out(:,:,ii) = res;
-end;
+end
 end
