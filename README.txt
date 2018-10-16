@@ -1,2 +1,1 @@
-The Modulation Filterbank Model Toolbox is a MATLAB Toolbox offering a modular framework for setting up simple auditory models inspired by the work
-of Torsten Dau (PEMO model). These models aim at predicting the processing of temporal and spectral cues by human listeners.
+The Modulation Filterbank Model Toolbox is a MATLAB Toolbox offering a modular framework for setting up simple auditory models inspired by the work of Torsten Dau (PEMO model). These models aim at predicting the processing of temporal and spectral cues by human listeners.
