@@ -113,7 +113,7 @@ end
 % "Power" compression
 if isfield(cfg, 'compression_power')
     if isyes(cfg.compression_power)
-        cfg = set_default_cfg(cfg, 'compression_n', 0.6);
+        cfg = set_default_cfg(cfg, 'compression_n', 0.6, 'compression_knee', 1);
     end
 else
     cfg.compression_power = 'no';
@@ -122,7 +122,7 @@ end
 % "Brokenstick" compression
 if isfield(cfg, 'compression_brokenstick')
     if isyes(cfg.compression_brokenstick)
-        cfg = set_default_cfg(cfg, 'compression_n', 0.25);%, 'compression_a', 30274, 'compression_b', 0.06);
+        cfg = set_default_cfg(cfg, 'compression_n', 0.25, 'compression_knee', 1);%, 'compression_a', 30274, 'compression_b', 0.06);
     end
 else
     cfg.compression_brokenstick = 'no';
@@ -412,13 +412,15 @@ if isyes(cfg.envelope_extract)
     clear hilbert_envelope
 end
 
-%% "Power" compression (relative to frequency fa)
+%% "Power" compression
+% WARNING: below the kneepoint this option actially performs an *expansion*
+% of the signal
 
 if isyes(cfg.compression_power)
     if isyes(cfg.verbose)
         tic
         fprintf('Power compression\n')
-        display_cfg(cfg, 'compression_n');
+        display_cfg(cfg, 'compression_n', 'compression_knee');
     end
     
     if size(cfg.compression_n)==1
@@ -427,7 +429,7 @@ if isyes(cfg.compression_power)
         error('simwork.cfg.compression_n does not have the same number of channels as the output of the Gammatone or DRNL Filterbank');
     end
     
-    compressed_response = sign(outsig).*abs(outsig).^(ones(Nsamples,1)*cfg.compression_n);
+    compressed_response = sign(outsig).*abs(outsig/cfg.compression_knee).^(ones(Nsamples,1)*cfg.compression_n)*cfg.compression_knee;
     outsig = compressed_response;
     
     if nargout>1
@@ -443,13 +445,13 @@ if isyes(cfg.compression_power)
     clear compressed_response
 end
 
-%% "Brockenstick" compression (relative to frequency fa)
+%% "Brockenstick" compression
 
 if isyes(cfg.compression_brokenstick)
     if isyes(cfg.verbose)
         tic
         fprintf('Brokenstick compression\n')
-        display_cfg(cfg, 'compression_n', 'compression_a', 'compression_k');
+        display_cfg(cfg, 'compression_n', 'compression_a', 'compression_knee');
     end
     
     if length(cfg.compression_n)==1
@@ -457,7 +459,7 @@ if isyes(cfg.compression_brokenstick)
     elseif size(cfg.compression_n,2) ~= Nchannels
         error('simwork.cfg.compression_n does not have the same number of channels as the output of the Gammatone or DRNL Filterbank');
     end
-    cfg.compression_b = cfg.compression_a.*(cfg.compression_k.^(1-cfg.compression_n));
+    cfg.compression_b = cfg.compression_a.*(cfg.compression_knee.^(1-cfg.compression_n));
     
     compressed_response = sign(outsig).*min(cfg.compression_a*abs(outsig),(ones(Nsamples,1)*cfg.compression_b).*(abs(outsig).^(ones(Nsamples,1)*cfg.compression_n)));
     outsig = compressed_response;
@@ -475,7 +477,7 @@ if isyes(cfg.compression_brokenstick)
     clear compressed_response
 end
 
-%% Stefan's "Brokenstick" compression (relative to frequency fa)
+%% Stefan's "Brokenstick" compression
 
 if isyes(cfg.compression_sbrokenstick)
     if isyes(cfg.verbose)

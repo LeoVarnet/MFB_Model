@@ -16,9 +16,9 @@ cfg.channels2plot = 1:5;
 % create the input within the model function
 
 cfg.stim_gen = 'yes';
-cfg.stim_fc = 1000;
-cfg.stim_fm = 20;
-cfg.stim_Mdepth = 1;
+cfg.stim_fc = 5000;
+cfg.stim_fm = 10;
+cfg.stim_Mdepth = 0.5;
 cfg.stim_A = 1;
 cfg.stim_fun=@create_AM;
 
@@ -32,11 +32,12 @@ cfg.gtone_fmin=ERB2f(f2ERB(cfg.stim_fc)-2);
 cfg.gtone_fmax=ERB2f(f2ERB(cfg.stim_fc)+2)+1;
 
 %% compression
-% WARNING: the option compression_brokenstick requires some calibration
-% (kneepoint level) 
+% WARNING: this module requires a prliminary calibration (set kneepoint
+% level at 40 dB SPL)
 
 cfg.compression_power = 'yes'; 
 cfg.compression_n = [1 1 0.3 1 1];
+cfg.compression_knee = 1;
 
 %% hair-cell transduction
 
@@ -45,6 +46,9 @@ cfg.HC_trans = 'yes';
 %% adaptation
 
 cfg.adapt_HP = 'yes';
+
+%%
+cfg.phase_insens_hilbert = 'yes';
 
 %% modulation filterbank
 
@@ -60,8 +64,8 @@ cfg.downsampling = 'yes';
 cfg.downsampling_factor = 10;
 
 %% internal noise
-% several internal noise types are implemented, I recommend sticking to the
-% basic additive noise though. Internal noise level is expressed in arbitrary units -
+% several internal noise types are implemented, I recommend using additive
+% noise only though. Internal noise level is expressed in arbitrary units -
 % needs to be calibrated.
 
 cfg.intnoise = 'yes';

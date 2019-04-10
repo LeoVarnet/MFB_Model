@@ -26,7 +26,7 @@ if nargin>6
     error('You must specify both msubplot and nsubplot: plot_channels( X, Y, chan2plot, plotfun, msubplot, nsubplot )');
 end
 
-%figure;
+figure;
 
 if ndims(Y)==2
     maxval = max(max(abs(Y(:,chan2plot))));
