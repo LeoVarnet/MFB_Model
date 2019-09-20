@@ -34,7 +34,7 @@ function [ outsig, step, cfg ] = auditorymodel( varargin )
 %  cfg.adapt_HP_order (only for HP)
 % - Modulation filterbank: cfg.mod_filterbank or cfg.modS_filterbank
 %  cfg.modbank_fmin, cfg.modbank_fmax, cfg.LP_filter
-%  cfg.modbank_Qfactor (only for mod_filterbank)
+%  cfg.modbank_Qfactor, cfg.modbank_filtfilt (only for mod_filterbank)
 % - Phase insensitivity: cfg.phase_insens_hilbert or cfg.phase_insens_filt
 %  cfg.phase_insens_cut, cfg.phase_insens_order
 % - Downsampling: cfg.downsampling
@@ -46,7 +46,7 @@ function [ outsig, step, cfg ] = auditorymodel( varargin )
 % - General display options: cfg.verbose, cfg.display_step, cfg.display_out
 %  cfg.channels2plot
 %
-% Leo Varnet 2016 - last update : january 2018
+% Leo Varnet 2016 - last update : january 2019
 
 if nargin == 1
     cfg = varargin{1};
@@ -175,7 +175,7 @@ end
 % Modulation filterbank
 if isfield(cfg, 'mod_filterbank')
     if isyes(cfg.mod_filterbank)
-        cfg = set_default_cfg(cfg, 'modbank_fmin', 2, 'modbank_fmax', 150, 'modbank_LPfilter', 'no', 'modbank_Nmod', [], 'modbank_Qfactor', 1);
+        cfg = set_default_cfg(cfg, 'modbank_fmin', 2, 'modbank_fmax', 150, 'modbank_LPfilter', 'no', 'modbank_Nmod', [], 'modbank_Qfactor', 1, 'modbank_filtfilt', 'no');
     end
 else
     cfg.mod_filterbank = 'no';
@@ -496,13 +496,6 @@ if isyes(cfg.compression_sbrokenstick)
         compressed_response(:,ichan) = nltrans3(outsig(:,ichan), cfg.compression_knee, cfg.compression_n(ichan), cfg.compression_smooth);
     end
     
-%     idx_ch_above = find(fc>cfg.BScomp_fa);
-%     idx_ch_below = find(fc<=cfg.BScomp_fa);
-%     compressed_response = zeros(Nchannels, Nsamples);
-%     compressed_response(idx_ch_above,:) = nltrans3(outsig(idx_ch_above,:), cfg.BScomp_knee, cfg.BScomp_n_above, cfg.BScomp_smooth);
-% %     compressed_response(idx_ch_above(1),:) = nltrans3(outsig(idx_ch_above(1),:), cfg.BScomp_knee, cfg.BScomp_n_above, cfg.BScomp_smooth);
-% %     compressed_response(idx_ch_above(2),:) = nltrans3(outsig(idx_ch_above(2),:), cfg.BScomp_knee, 1, cfg.BScomp_smooth);
-%     compressed_response(idx_ch_below,:) = nltrans3(outsig(idx_ch_below,:), cfg.BScomp_knee, cfg.BScomp_n_below, cfg.BScomp_smooth);
     outsig = compressed_response;
     
     if nargout>1
@@ -543,9 +536,6 @@ if isyes(cfg.HC_trans)
     clear HC
 end
 
-%% Expansion
-
- 
 %% Feedback loops
 
 if isyes(cfg.adapt_FBloops)
@@ -621,7 +611,7 @@ if isyes(cfg.mod_filterbank)
     if isyes(cfg.verbose)
         tic
         fprintf('Modulation filterbank\n')
-        display_cfg(cfg, 'modbank_fmin', 'modbank_fmax', 'modbank_LPfilter', 'modbank_Nmod', 'modbank_Qfactor');
+        display_cfg(cfg, 'modbank_fmin', 'modbank_fmax', 'modbank_LPfilter', 'modbank_Nmod', 'modbank_Qfactor', 'modbank_filtfilt');
     end
     
     if isyes(cfg.modbank_LPfilter)
@@ -631,20 +621,7 @@ if isyes(cfg.mod_filterbank)
     
     [BB, AA, fmc] = modulation_filterbank(cfg.modbank_fmin, cfg.modbank_fmax, fs, cfg.modbank_Nmod, cfg.modbank_Qfactor);
     Nmodchannels = length(fmc);
-    E_mod = apply_filterbank(BB, AA, outsig);
-    
-%     for i=1:length(fmc)
-%         if fmc(i)>10
-%             for j=1:length(fc)
-% %                 rectif = max((squeeze(E_mod(:,j,i))),0);
-% %                 [B,A] = butter(2,2*(6/fs));
-% %                 envenv = filtfilt(B,A,rectif);
-%                 envenv = hilbert_extraction(squeeze(E_mod(:,j,i)),fs);
-%                 E_mod(:,j,i) = (envenv / rms(envenv)) * rms(E_mod(:,j,i));
-%             end
-%         end
-%     end
-%     
+    E_mod = apply_filterbank(BB, AA, outsig, cfg.modbank_filtfilt);
     outsig = E_mod;
         
     if nargout>1
@@ -913,7 +890,7 @@ end
 if (isyes(cfg.display_step) || isyes(cfg.display_out)) && (isyes(cfg.mod_filterbank) || isyes(cfg.modS_filterbank))
     plot_modep(fc, fmc, outsig);
     title('Final internal representation');
-    plot_channels(t, outsig, cfg.channels2plot, @plot, 1,5);
+    plot_channels(t, outsig, cfg.channels2plot);
     set(gcf, 'Name', 'Final internal representation');
     legend(num2str(fmc'))
 end

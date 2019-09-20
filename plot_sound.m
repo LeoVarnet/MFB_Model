@@ -7,7 +7,7 @@ function [pdB, f_spec, t_spec] = plot_sound( S, fs, varargin )
 % Optionally, you can get the spectrogram as an output:
 % [pdB, f_spec, t_spec] = plot_sound( S, fs, varargin )
 %
-% Leo Varnet - 2018
+% Leo Varnet - 2018 (last update 2019)
 
 % defaults
 dBlim = []; 
@@ -56,7 +56,7 @@ S=S(n1_ech:n2_ech);
 t_S = (1:length(S))/fs;
 
 figure
-ht = subplot(2,2,1,'Position',[0.1, 0.75, 0.6, 0.2]);
+ht = subplot('Position',[0.1, 0.75, 0.6, 0.2]);
 plot(ht, t_S,S);
 xlim(ht, [t_S(1) t_S(end)])
 ylabel(ht,'Amplitude')
@@ -69,19 +69,18 @@ pdB=10*log10(abs(p));
 FreqIndex=find(f_spec>=Freq(1) & f_spec<=Freq(2));
 
 [perio, f_perio] = periodogram(S, 1:length(S), f_spec, fs);
-hf = subplot(2,2,4,'Position', [0.75, 0.1, 0.2, 0.6]);
+hf = subplot('Position', [0.75, 0.1, 0.2, 0.6]);
 perio_dB = 10*log10((perio));%abs
 plot(hf, f_perio, perio_dB);
 xlim(hf, Freq)
+if ~isempty(dBlim)
+    ylim(dBlim)
+end
 ylabel(hf, 'amplitude (dB)');
 set(hf, 'XTickLabels',{})
-% set(hf, 'YTick',[-150 -100 -70 -50])
-% set(hf, 'YTickLabels',{'0','50', '80', '100'})
 camroll(hf, 90)
 
-hs = subplot(2,2,3,'Position',[0.1,0.1, 0.6, 0.6]);
-%scrsz = get(groot,'ScreenSize');
-%figure('Position',[0 scrsz(4)-200-100 1300 200]);
+hs = subplot('Position',[0.1,0.1, 0.6, 0.6]);
 surf(t_spec,f_spec(FreqIndex),pdB(FreqIndex,:),'EdgeColor','none');
 surf(hs, t_spec,f_spec(FreqIndex),pdB(FreqIndex,:),'EdgeColor','none');
 h=pcolor(t_spec,f_spec(FreqIndex),pdB(FreqIndex,:));

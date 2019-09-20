@@ -1,6 +1,6 @@
 function [ BB, AA, fc ] = modulation_filterbank( fmin, fmax, fs, varargin ) % removed N
-%[ BB, AA, fc ] = MODULATION_FILTERBANK ( fmin, fmax, fs, {NChannels, Qfactor} )
-%generates a bank of 1st order butterworth filters (default Q=1) between fmin and
+%[ BB, AA, fc ] = MODULATION_FILTERBANK ( fmin, fmax, fs, NChannels, Qfactor )
+%generates a bank of 1st order butterworth filters (default Qfactor=1) between fmin and
 %fmax, overlapping at their -3dB point
 %
 % Leo Varnet and Andrew King 2016
