@@ -18,10 +18,11 @@ function [ outsig, step, cfg ] = auditorymodel( varargin )
 %  cfg.stim_fc, cfg.stim_fs, cfg.stim_fm, cfg.stim_Mdepth,
 %  cfg.stim_duration, cfg.stim_A, cfg.stim_carrier_waveform,
 %  cfg.stim_M_waveform, cfg.stim_fun  
-% - Peripheral filtering: cfg.gtone_filterbank, cfg.gtone_O_filterbank or
-% cfg.DRNL_filterbank 
+% - Peripheral filtering: cfg.gtone_filterbank, cfg.gtone_P_filterbank,
+% cfg.gtone_O_filterbank, cfg.gtone_t_filterbank or cfg.DRNL_filterbank 
 %  cfg.gtone_fmin, cfg.gtone_fmax (only for gtone_filterbank and
 %  gtone_O_filterbank)
+%  cfg.gtone_B (only for gtone_P_filterbank)
 %  gtone_order, cfg.gtone_ERB (only for gtone_O_filterbank)
 % - Hilbert envelope extraction: cfg.envelope_extract
 % - Compression: cfg.compression_power or compression_brokenstick
@@ -29,20 +30,20 @@ function [ outsig, step, cfg ] = auditorymodel( varargin )
 %  cfg.compression_smooth (only for brokenstick) 
 % - Hair-cell transduction: cfg.HC_trans
 %  cfg.HC_fcut
-% - Adaptation: cfg.adapt_FBloops or cfg.adapt_HP
-%  cfg.adapt_FBloops_timeconst (only for FBloops), cfg.adapt_HP_fc and
-%  cfg.adapt_HP_order (only for HP)
-% - Modulation filterbank: cfg.mod_filterbank or cfg.modS_filterbank
-%  cfg.modbank_fmin, cfg.modbank_fmax, cfg.LP_filter
-%  cfg.modbank_Qfactor, cfg.modbank_filtfilt (only for mod_filterbank)
+% - Adaptation: cfg.adapt_HP
+%  cfg.adapt_HP_fc and cfg.adapt_HP_order
+% - Modulation filterbank: cfg.mod_filterbank or cfg.modS_filterbank or
+% cfg.modP_filterbank
+%  cfg.modbank_fmin, cfg.modbank_fmax, cfg.LP_filter, cfg.modbank_Qfactor
+%  (for mod_filterbank) or cfg.modbank_AA and cfg.modbank_BB (for
+%  modP_filterbank), cfg.modbank_filtfilt (only for mod_filterbank and
+%  modP_filterbank)  
 % - Phase insensitivity: cfg.phase_insens_hilbert or cfg.phase_insens_filt
 %  cfg.phase_insens_cut, cfg.phase_insens_order
 % - Downsampling: cfg.downsampling
 %  cfg.downsampling_factor
-% - Memory decay: cfg.memorydecay
-%  cfg.memorydecay_tau
 % - Internal noise: cfg.intnoise
-%  cfg.intnoise_addstd, cfg.intnoise_multratio, intnoise_memstd
+%  cfg.intnoise_addstd, cfg.intnoise_multratio, intnoise_memstd, cfg.memorydecay_tau
 % - General display options: cfg.verbose, cfg.display_step, cfg.display_out
 %  cfg.channels2plot
 %
@@ -88,6 +89,15 @@ else
     cfg.gtone_filterbank = 'no';
 end
 
+% Predefined gammatone filterbank
+if isfield(cfg, 'gtone_P_filterbank')
+%     if isyes(cfg.gtone_filterbank)
+%         cfg = set_default_cfg(cfg, 'gtone_fmin', 70, 'gtone_fmax', 6700);
+%     end
+else
+    cfg.gtone_P_filterbank = 'no';
+end
+
 % Oldenburg's Gammatone filterbank
 if isfield(cfg, 'gtone_O_filterbank')
     if isyes(cfg.gtone_O_filterbank)
@@ -95,6 +105,15 @@ if isfield(cfg, 'gtone_O_filterbank')
     end
 else
     cfg.gtone_O_filterbank = 'no';
+end
+
+% Matlab's audio toolbox Gammatone filterbank
+if isfield(cfg, 'gtone_t_filterbank')
+    if isyes(cfg.gtone_t_filterbank)
+        cfg = set_default_cfg(cfg, 'gtone_fmin', 70, 'gtone_fmax', 6700);
+    end
+else
+    cfg.gtone_t_filterbank = 'no';
 end
 
 % DRNL filterbank
@@ -106,8 +125,8 @@ else
     cfg.DRNL_filterbank = 'no';
 end
 
-if isyes(cfg.gtone_filterbank)+isyes(cfg.gtone_O_filterbank)+isyes(cfg.DRNL_filterbank)>1
-    error('too many peripheral filtering stages. You have to choose between gtone_filterbank, gtone_O_filterbank or DRNL_filterbank');
+if isyes(cfg.gtone_filterbank)+isyes(cfg.gtone_O_filterbank)+isyes(cfg.gtone_t_filterbank)+isyes(cfg.DRNL_filterbank)>1
+    error('too many peripheral filtering stages. You have to choose between gtone_filterbank, gtone_O_filterbank, gtone_t_filterbank or DRNL_filterbank');
 end
 
 % "Power" compression
@@ -137,8 +156,8 @@ else
     cfg.compression_sbrokenstick = 'no';
 end
 
-if isyes(cfg.compression_power)+isyes(cfg.compression_sbrokenstick)>1
-    error('too many compression stages. You have to choose between compression_power or compression_brokenstick');
+if isyes(cfg.compression_power)+isyes(cfg.compression_sbrokenstick)+isyes(cfg.compression_brokenstick)>1
+    error('too many compression stages. You have to choose between compression_power, compression_brokenstick or compression_sbrokenstick');
 end
 
 % Hair-cell transduction
@@ -150,15 +169,6 @@ else
     cfg.HC_trans = 'no';
 end
 
-% Feedback loops
-if isfield(cfg, 'adapt_FBloops')
-    if isyes(cfg.adapt_FBloops)
-        cfg = set_default_cfg(cfg, 'adapt_FBloops_timeconst', [0.005 0.05 0.129 0.253 0.5]);
-    end
-else
-    cfg.adapt_FBloops = 'no';
-end
-
 % Adaptation by high-pass filtering
 if isfield(cfg, 'adapt_HP')
     if isyes(cfg.adapt_HP)
@@ -166,10 +176,6 @@ if isfield(cfg, 'adapt_HP')
     end
 else
     cfg.adapt_HP = 'no';
-end
-
-if isyes(cfg.adapt_FBloops)+isyes(cfg.adapt_HP)>1
-    error('too many adaptation stages. You have to choose between adapt_FBloops or adapt_FBloops');
 end
 
 % Modulation filterbank
@@ -190,7 +196,16 @@ else
     cfg.modS_filterbank = 'no';
 end 
 
-if isyes(cfg.mod_filterbank)+isyes(cfg.modS_filterbank)>1
+% Predefined modulation filterbank
+if isfield(cfg, 'modP_filterbank')
+    if isyes(cfg.modP_filterbank)
+        cfg = set_default_cfg(cfg, 'modbank_filtfilt', 'no');
+    end
+else
+    cfg.modP_filterbank = 'no';
+end 
+
+if isyes(cfg.mod_filterbank)+isyes(cfg.modS_filterbank)+isyes(cfg.modP_filterbank)>1
     error('too many modulation filtering stages. You have to choose between mod_filterbank or modS_filterbank');
 end
 
@@ -224,15 +239,6 @@ if isfield(cfg, 'downsampling')
 else
     cfg.downsampling = 'no';
 end
-
-% Memory decay
-if isfield(cfg, 'memorydecay')
-    if isyes(cfg.memorydecay)
-        cfg = set_default_cfg(cfg, 'memorydecay_tau', 1.2);
-    end
-else
-    cfg.memorydecay = 'no';
-end 
 
 % Internal noises
 if isfield(cfg, 'intnoise')
@@ -306,7 +312,40 @@ if isyes(cfg.gtone_filterbank)
     gtone_responses = real(gtone_responses);
     outsig = gtone_responses;
     if isyes(cfg.display_step)
-        plot_channels(t, gtone_responses, cfg.channels2plot);        
+        figure;plot_channels(t, gtone_responses, cfg.channels2plot);        
+        set(gcf, 'Name', 'Gammatones responses');
+    end
+    if nargout>1
+        step.fc = fc;
+        step.fb = fb;
+        step.Nchannels = Nchannels;
+        step.gtone_responses = gtone_responses;
+    end
+    
+    if isyes(cfg.verbose)
+        fprintf(['  elapsed time: ' num2str(toc) '\n'])
+    end
+    clear gtone_responses
+end
+
+%% Gammatone filterbank
+
+if isyes(cfg.gtone_P_filterbank)
+    if isyes(cfg.verbose)
+        tic
+        fprintf('Gammatone filterbank\n')
+        display_cfg(cfg,'gtone_fc','gtone_fb')
+    end
+    
+    [ gtone_responses] = apply_gammatone_filterbank(input, cfg.gtone_B);
+    fc = cfg.gtone_fc;
+    fb = cfg.gtone_fb;
+    Nsamples = length(gtone_responses);
+    Nchannels = length(fc);
+    gtone_responses = real(gtone_responses);
+    outsig = gtone_responses;
+    if isyes(cfg.display_step)
+        figure;plot_channels(t, gtone_responses, cfg.channels2plot);        
         set(gcf, 'Name', 'Gammatones responses');
     end
     if nargout>1
@@ -339,7 +378,39 @@ if isyes(cfg.gtone_O_filterbank)
     gtone_responses = real(gtone_responses)';
     outsig = gtone_responses;
     if isyes(cfg.display_step)
-        plot_channels(t, gtone_responses, cfg.channels2plot);        
+        figure;plot_channels(t, gtone_responses, cfg.channels2plot);        
+        set(gcf, 'Name', 'Gammatones responses');
+    end
+    if nargout>1
+        step.fc = fc;
+        step.Nchannels = Nchannels;
+        step.gtone_responses = gtone_responses;
+    end
+    if isyes(cfg.verbose)
+        fprintf(['  elapsed time: ' num2str(toc) '\n'])
+    end
+    clear gtone_responses
+end
+
+%% Matlab's audio toolbox gammatone filterbank
+
+if isyes(cfg.gtone_t_filterbank)
+    if isyes(cfg.verbose)
+        tic
+        fprintf('Gammatone filterbank\n')
+        display_cfg(cfg, 'gtone_fmin', 'gtone_fmax')
+    end
+    
+    GF = gammatoneFilterBank([cfg.gtone_fmin, cfg.gtone_fmax],'SampleRate',fs);
+    fc=GF.getCenterFrequencies;
+    fb=GF.getBandwidths;
+    Nchannels = length(fc);
+    
+    gtone_responses = GF(input);
+    outsig = gtone_responses;
+    
+    if isyes(cfg.display_step)
+        figure;plot_channels(t, gtone_responses, cfg.channels2plot);        
         set(gcf, 'Name', 'Gammatones responses');
     end
     if nargout>1
@@ -374,7 +445,7 @@ if isyes(cfg.DRNL_filterbank)
         step.Nchannels = Nchannels;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, DRNL_responses, cfg.channels2plot);        
+        figure;plot_channels(t, DRNL_responses, cfg.channels2plot);        
         set(gcf, 'Name', 'DRNL responses');
     end
     if isyes(cfg.verbose)
@@ -398,6 +469,7 @@ if isyes(cfg.envelope_extract)
     hilbert_envelope = hilbert_extraction(input, fs);
     outsig = hilbert_envelope;
     if isyes(cfg.display_step)
+        figure;
         plot_sound(hilbert_envelope, fs, cfg.display_Freq, cfg.display_Overlap, cfg.display_Nwindow, cfg.display_NFFT);
         set(gcf, 'Name', 'Hilbert envelope');
     end
@@ -436,7 +508,7 @@ if isyes(cfg.compression_power)
         step.compressed_response = compressed_response;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, compressed_response, cfg.channels2plot);        
+        figure;plot_channels(t, compressed_response, cfg.channels2plot);        
         set(gcf, 'Name', 'Power-compressed responses responses');
     end
     if isyes(cfg.verbose)
@@ -468,7 +540,7 @@ if isyes(cfg.compression_brokenstick)
         step.compressed_response = compressed_response;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, compressed_response, cfg.channels2plot);        
+        figure;plot_channels(t, compressed_response, cfg.channels2plot);        
         set(gcf, 'Name', 'Brockenstick-compressed responses');
     end
     if isyes(cfg.verbose)
@@ -502,7 +574,7 @@ if isyes(cfg.compression_sbrokenstick)
         step.compressed_response = compressed_response;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, compressed_response, cfg.channels2plot);        
+        figure;plot_channels(t, compressed_response, cfg.channels2plot);        
         set(gcf, 'Name', 'Brokenstick-compressed responses responses');
     end
     if isyes(cfg.verbose)
@@ -527,39 +599,13 @@ if isyes(cfg.HC_trans)
         step.HC = HC_response;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, HC_response, cfg.channels2plot);        
+        figure;plot_channels(t, HC_response, cfg.channels2plot);        
         set(gcf, 'Name', 'Hair-cell responses');
     end
     if isyes(cfg.verbose)
         fprintf(['  elapsed time: ' num2str(toc) '\n'])
     end
     clear HC
-end
-
-%% Feedback loops
-
-if isyes(cfg.adapt_FBloops)
-    if isyes(cfg.verbose)
-        tic
-        fprintf('Feedback loops\n')
-        display_cfg(cfg, 'adapt_FBloops_timeconst');
-    end
-    adapted_response = outsig;
-    for ichan = 1:Nchannels
-        adapted_response(:,ichan) = adaptloop(adapted_response(:,ichan),fs,10,0, cfg.adapt_FBloops_timeconst);
-    end
-    outsig = adapted_response;
-    if nargout>1
-        step.FB = adapted_response;
-    end
-    if isyes(cfg.display_step)
-        plot_channels(t, adapted_response, cfg.channels2plot);
-        set(gcf, 'Name', 'Feedback loop responses');
-    end
-    if isyes(cfg.verbose)
-        fprintf(['  elapsed time: ' num2str(toc) '\n'])
-    end
-    clear ichan adapted_response
 end
 
 %% Adaptation by high-pass filtering
@@ -574,7 +620,7 @@ if isyes(cfg.adapt_HP)
     %adapted_response=filtfilt(B,A,outsig')';
     adapted_response=filter(B,A,outsig);
     if isyes(cfg.display_step)
-        plot_channels(t, adapted_response, cfg.channels2plot);
+        figure;plot_channels(t, adapted_response, cfg.channels2plot);
         set(gcf, 'Name', 'summed HP-adapted responses');
     end
     outsig = adapted_response;
@@ -615,7 +661,7 @@ if isyes(cfg.mod_filterbank)
     end
     
     if isyes(cfg.modbank_LPfilter)
-        [B,A] = butter(6,2*(100/fs)); % [B,A] = butter(1,2*(150/fs));%
+        [B, A] = butter(6,2*(100/fs)); % [B,A] = butter(1,2*(150/fs));%
         outsig = filter(B,A,outsig);
     end
     
@@ -632,11 +678,41 @@ if isyes(cfg.mod_filterbank)
         fprintf(['  elapsed time: ' num2str(toc) '\n'])
     end
     if isyes(cfg.display_step)
-        plot_channels(t, E_mod, cfg.channels2plot);        
+        figure;plot_channels(t, E_mod, cfg.channels2plot);        
         set(gcf, 'Name', 'Modulation filterbank responses');    
         legend(num2str(fmc'))
     end
     clear E_mod AA BB A B
+end
+
+%% Predefined modulation filterbank
+
+if isyes(cfg.modP_filterbank)
+    if isyes(cfg.verbose)
+        tic
+        fprintf('Modulation filterbank\n')
+        display_cfg(cfg, 'modbank_fmc', 'modbank_filtfilt');
+    end
+    
+    %[BB, AA, fmc] = modulation_filterbank(cfg.modbank_fmin, cfg.modbank_fmax, fs, cfg.modbank_Nmod, cfg.modbank_Qfactor);
+    fmc = cfg.modbank_fmc;
+    Nmodchannels = length(cfg.modbank_fmc);
+    E_mod = apply_filterbank(cfg.modbank_BB, cfg.modbank_AA, outsig, cfg.modbank_filtfilt);
+    outsig = E_mod;
+        
+    if nargout>1
+        step.E_mod = E_mod;
+        step.fmc = fmc;
+    end
+    if isyes(cfg.verbose)
+        fprintf(['  elapsed time: ' num2str(toc) '\n'])
+    end
+    if isyes(cfg.display_step)
+        figure;plot_channels(t, E_mod, cfg.channels2plot);        
+        set(gcf, 'Name', 'Modulation filterbank responses');    
+        legend(num2str(fmc'))
+    end
+    clear E_mod
 end
 
 %% Stefan's modulation filterbank
@@ -664,7 +740,7 @@ if isyes(cfg.modS_filterbank)
         step.fmc = fmc;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, E_mod, cfg.channels2plot);            
+        figure;plot_channels(t, E_mod, cfg.channels2plot);            
         legend(num2str(fmc'))
         set(gcf, 'Name', 'Modulation filterbank responses');
     end
@@ -697,7 +773,7 @@ if isyes(cfg.phase_insens_hilbert)
     
     outsig = E_phase_ins;
     if isyes(cfg.display_step)
-        plot_channels(t, E_phase_ins, cfg.channels2plot);            
+        figure;plot_channels(t, E_phase_ins, cfg.channels2plot);            
         legend(num2str(fmc'))
         set(gcf, 'Name', 'Phase insensitive responses');
     end
@@ -721,19 +797,47 @@ if isyes(cfg.phase_insens_filt)
     E_phase_ins = outsig;
     
     for i=1:Nmodchannels
-            for j=1:length(fc)
-%                 % filtre
-                rectif = max((squeeze(outsig(:,j,i))),0);
-                [B,A] = butter(cfg.phase_insens_order,2*(cfg.phase_insens_cut/fs));%butter(1,2*(20/fs));%
-                envenv = filtfilt(B,A,rectif);
-%                 
-                E_phase_ins(:,j,i) = (envenv / rms(envenv)) * rms(outsig(:,j,i));
+        for j=1:length(fc)
+            % filtre
+            rectif = max((squeeze(outsig(:,j,i))),0);
+            [B,A] = butter(cfg.phase_insens_order,2*(cfg.phase_insens_cut/fs));%butter(1,2*(20/fs));%
+            envenv = filtfilt(B,A,rectif);
+            
+            E_phase_ins(:,j,i) = (envenv / rms(envenv)) * rms(outsig(:,j,i));
             end
     end
     
     outsig = E_phase_ins;
     if isyes(cfg.display_step)
-        plot_channels(t, E_phase_ins, cfg.channels2plot);            
+        figure;plot_channels(t, E_phase_ins, cfg.channels2plot);            
+        legend(num2str(fmc'))
+        set(gcf, 'Name', 'Phase insensitive responses');
+    end
+    if nargout>1
+        step.E_phase_ins = E_phase_ins;
+    end
+    if isyes(cfg.verbose)
+        fprintf(['  elapsed time: ' num2str(toc) '\n'])
+    end
+end
+
+%% Phase insensitivity (modulation excitation pattern)
+
+if isyes(cfg.phase_insens_MEP)
+    if isyes(cfg.verbose)
+        tic
+        fprintf('Phase insensitivity (modulation excitation pattern)\n')
+    end
+    
+    for i=1:Nmodchannels
+        for j=1:length(fc)
+            E_phase_ins(1,j,i) = rms(outsig(:,j,i));
+        end
+    end
+    
+    outsig = E_phase_ins;
+    if isyes(cfg.display_step)
+        figure;plot_channels(t, E_phase_ins, cfg.channels2plot);            
         legend(num2str(fmc'))
         set(gcf, 'Name', 'Phase insensitive responses');
     end
@@ -779,9 +883,9 @@ end
 
 if isyes(cfg.display_step) && (isyes(cfg.mod_filterbank) || isyes(cfg.modS_filterbank))
     plot_modep(fc, fmc, outsig);
-    plot_channels(t, outsig, cfg.channels2plot);
-    set(gcf, 'Name', 'Modulation filterbank responses');
-    legend(num2str(fmc'))
+    %plot_channels(t, outsig, cfg.channels2plot);
+    set(gcf, 'Name', 'Modulation Excitation Pattern');
+    %legend(num2str(fmc'))
 end
 
 %% Internal noise
@@ -794,11 +898,15 @@ if isyes(cfg.intnoise) & (cfg.intnoise_addstd>0 | cfg.intnoise_multratio>0 | cfg
     end
     rms_Emod = sqrt(mean(outsig.^2,1));
     noisy_Emod = outsig;
+    
     % additive noise
+    
     if cfg.intnoise_addstd>0
         noisy_Emod = noisy_Emod+randn(size(noisy_Emod))*cfg.intnoise_addstd;
     end
+    
     % multiplicative noise
+    
     if cfg.intnoise_multratio>0
         multnoise = randn(size(outsig));
         for i_chan = 1:Nchannels
@@ -808,7 +916,9 @@ if isyes(cfg.intnoise) & (cfg.intnoise_addstd>0 | cfg.intnoise_multratio>0 | cfg
         end
         noisy_Emod = noisy_Emod+multnoise;
     end
+    
     % memory noise
+    
     if cfg.intnoise_memstd>0
         [sizex, sizey, sizez] = size(noisy_Emod);
         [idx_value, ~, ~] = ndgrid(1:sizex,1:sizey,1:sizez);
@@ -822,7 +932,7 @@ if isyes(cfg.intnoise) & (cfg.intnoise_addstd>0 | cfg.intnoise_multratio>0 | cfg
         step.noisy_Emod = noisy_Emod;
     end
     if isyes(cfg.display_step)
-        plot_channels(t, noisy_Emod, cfg.channels2plot);
+        figure;plot_channels(t, noisy_Emod, cfg.channels2plot);
         set(gcf, 'Name', 'internal representation with internal noise');
     end
     if isyes(cfg.verbose)
@@ -831,73 +941,15 @@ if isyes(cfg.intnoise) & (cfg.intnoise_addstd>0 | cfg.intnoise_multratio>0 | cfg
     clear noisy_Emod rms_Emod multnoise i_chan i_mod
 end
 
-%% Memory decay
-% 
-% if isyes(cfg.memorydecay)
-%     
-%     if isyes(cfg.verbose)
-%         tic
-%         fprintf('memory decay\n')
-%         display_cfg(cfg, 'memorydecay_tau');
-%     end
-%     memory_Emod = outsig;
-%     
-%     [sizex, sizey, sizez] = size(memory_Emod);
-%     [idx_value, ~, ~] = ndgrid(1:sizex,1:sizey,1:sizez);
-%     memory_Emod = memory_Emod.*(exp(t(idx_value)/cfg.memorydecay_tau));
-%     outsig = memory_Emod;
-%     if nargout>1
-%         step.memory_Emod = memory_Emod;
-%     end
-%     if isyes(cfg.display_step)
-%         plot_channels(t, memory_Emod, cfg.channels2plot);
-%         set(gcf, 'Name', 'internal representation with memory decay');
-%     end
-%     if isyes(cfg.verbose)
-%         fprintf(['  elapsed time: ' num2str(toc) '\n'])
-%     end
-%     clear memory_Emod sizex sizey sizez idx_value
-% end
-
-%% Additive memory noise
-
-% if isyes(cfg.intnoise) & cfg.intnoise_memstd>0
-%     if isyes(cfg.verbose)
-%         tic
-%         fprintf('Memory noise\n');
-%         display_cfg(cfg, 'intnoise_memstd');
-%     end
-%     noisy_Emod = outsig;
-%     if cfg.intnoise_memstd>0
-%         noisy_Emod = noisy_Emod+randn(size(noisy_Emod))*cfg.intnoise_memstd;
-%     end
-%     outsig = noisy_Emod;
-%     if nargout>1
-%         step.noisy_Emod = noisy_Emod;
-%     end
-%     if isyes(cfg.display_step)
-%         plot_channels(t, noisy_Emod, cfg.channels2plot);
-%         set(gcf, 'Name', 'internal representation with memory noise');
-%     end
-%     if isyes(cfg.verbose)
-%         fprintf(['  elapsed time: ' num2str(toc) '\n'])
-%     end
-%     clear noisy_Emod
-% end
-
 %% Plotting the Modulation Excitation Pattern
 
 if (isyes(cfg.display_step) || isyes(cfg.display_out)) && (isyes(cfg.mod_filterbank) || isyes(cfg.modS_filterbank))
     plot_modep(fc, fmc, outsig);
     title('Final internal representation');
-    plot_channels(t, outsig, cfg.channels2plot);
+    figure;plot_channels(t, outsig, cfg.channels2plot);
     set(gcf, 'Name', 'Final internal representation');
     legend(num2str(fmc'))
 end
-
-%% Suppr onset/offset
-
-%outsig = outsig(0.05*fs:end-0.02*fs,:,:);
 
 end
 

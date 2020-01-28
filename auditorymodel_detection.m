@@ -18,7 +18,7 @@ function [ interval, ir, cfg ] = auditorymodel_detection( in, template, cfg )
 %   cfg: config structure as input with all unspecified parameters set to
 % default.
 %
-% Leo Varnet 2016 - last update : 2017
+% Leo Varnet 2016 - last update : 2019
 
 %% Model structure / load arguments
 
@@ -67,12 +67,28 @@ if isfield(cfg,'detect_PEMOcorrcoef') && isyes(cfg.detect_PEMOcorrcoef)
     [~,interval] = max(ir);	% select cross power
     % if another interval than the first has the max cross power, the interval is wrong, since work.signal always carries the
     % signal interval in the first column
-    if interval ~= 1
-        interval = 0;
+%     if interval ~= 1
+%         interval = 0;
+%     end
+elseif isfield(cfg,'detect_PEMOeuclid') && isyes(cfg.detect_PEMOeuclid)
+    for ialter = 1:Nalter
+        ir(ialter)=sqrt(sum(sum(sum(in{ialter}(:)-template(:))^2)));
+%          cctemp = corrcoef(in{ialter}(:),template(:));
+%          ir(ialter)=cctemp(1,2);
     end
+   
+%     % xcorr of internal representation and template
+%     cc = sum(in.*repmat(template,1,size(in,2)));
+%     % now select the interval with the maximum standard deviation
+    [~,interval] = max(ir);	% select cross power
+    % if another interval than the first has the max cross power, the interval is wrong, since work.signal always carries the
+    % signal interval in the first column
+%     if interval ~= 1
+%         interval = 0;
+%     end
 elseif isfield(cfg,'detect_PEMOxcorr') && isyes(cfg.detect_PEMOxcorr)
     for ialter = 1:Nalter
-        %%% TO BE REPLACED WITH THE NORMALIZED XCORR
+        %%% NORMALIZED XCORR
         for ichan = 1:Nchan
             for imod = 1:Nmod
                 [crosscorr(:,ichan,imod),lags]=xcorr(in{ialter}(:, ichan, imod),template(:, ichan, imod), ceil(cfg.detect_PEMOxcorr_limit)); %, period_sample/2
@@ -121,20 +137,17 @@ elseif isfield(cfg,'decision_EPSM') && isyes(cfg.decision_EPSM)
     for ialter = 1:Nalter
         Epow(ialter) = mean(in{ialter}(:).^2,1);
     end
-    ratio_Epow = 10*log10(Epow(1)/Epow(2));
-    if ratio_Epow >= cfg.decision_EPSM_threshold
-        interval=1;
-    else
-        interval=randi(2)-1;
-    end
-    ir = Epow;
-%     Epow = mean(in.^2,1);
+    Epow_template = mean(template(:).^2,1);
+    %%% real EPSM
 %     ratio_Epow = 10*log10(Epow(1)/Epow(2));
-%     if ratio_Epow >= 0.5%1
+%     if ratio_Epow >= cfg.decision_EPSM_threshold
 %         interval=1;
 %     else
 %         interval=randi(2)-1;
 %     end
+%     ir = Epow;
+    %%% EPSM-like
+    [~,interval] = min(abs(Epow-Epow_template));
 end
 
 end

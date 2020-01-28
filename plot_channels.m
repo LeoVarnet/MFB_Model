@@ -1,10 +1,10 @@
-function [ ] = plot_channels( X, Y, chan2plot, plotfun, msubplot, nsubplot )
+function [ ] = plot_channels( X, Y, chan2plot, plotfun, msubplot, nsubplot, chantitles )
 %PLOT_CHANNELS Conveniently plots a certain number of channels in a matrix
 % of filterbank responses. To be used as plot_channels( X, Y, chan2plot)
 %
-% plot_channels( X, Y, chan2plot, plotfun, msubplot, nsubplot) uses the
+% plot_channels( X, Y, chan2plot, plotfun, msubplot, nsubplot, chanlabels) uses the
 % plotting function in plotfun (default: plot) and creates a
-% msubplot-by-nsubplot array of plots
+% msubplot-by-nsubplot array of plots with titles in chantitles
 %
 % Leo Varnet 2016
 
@@ -22,11 +22,14 @@ if nargin<6
         msubplot=nsubplot;
     end
 end
-if nargin>6
+if nargin<7
+    chantitles = [];
+end
+if nargin==5
     error('You must specify both msubplot and nsubplot: plot_channels( X, Y, chan2plot, plotfun, msubplot, nsubplot )');
 end
 
-figure;
+%figure;
 
 if ndims(Y)==2
     maxval = max(max(abs(Y(:,chan2plot))));
@@ -35,7 +38,7 @@ elseif ndims(Y)==3
 end
 
 isubplot = 1;
-for ichan=chan2plot
+for ichan=fliplr(chan2plot)
     subplot(nsubplot,msubplot,isubplot);
     if ndims(Y)==2
         plotfun(X,Y(:,ichan));
@@ -43,13 +46,17 @@ for ichan=chan2plot
     elseif ndims(Y)==3
         plotfun(X,squeeze(Y(:,ichan,:)));
     end
-    title(['Channel #' num2str((ichan))]);
+    if isempty(chantitles)
+        title(['Channel #' num2str((ichan))]);
+    else
+        title(chantitles(ichan,:));
+    end
     
-    xlim([X(1) X(end)]); ylim([-maxval maxval]);
+    xlim([X(1) X(end)]); %ylim([-maxval maxval]);
     isubplot = isubplot+1;
     hold on
 end
-%xlabel('time (s)');
+xlabel('time (s)');
 
 end
 
