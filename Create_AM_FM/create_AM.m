@@ -52,7 +52,7 @@ elseif strcmp(AM_waveform, 'square')
 end
 
 % generate t
-t = 0:(1/fs):duration;
+t = 1/fs:(1/fs):duration;
 
 % stim
 if ~strcmp(carrier_waveform, 'noise')

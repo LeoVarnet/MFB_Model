@@ -38,7 +38,7 @@ function [ outsig, step, cfg ] = auditorymodel( varargin )
 %  (for mod_filterbank) or cfg.modbank_AA and cfg.modbank_BB (for
 %  modP_filterbank), cfg.modbank_filtfilt (only for mod_filterbank and
 %  modP_filterbank)  
-% - Phase insensitivity: cfg.phase_insens_hilbert or cfg.phase_insens_filt
+% - Phase insensitivity: cfg.phase_insens_hilbert, phase_insens_MEP or cfg.phase_insens_filt
 %  cfg.phase_insens_cut, cfg.phase_insens_order
 % - Downsampling: cfg.downsampling
 %  cfg.downsampling_factor
@@ -227,8 +227,17 @@ else
     cfg.phase_insens_filt = 'no';
 end
 
-if isyes(cfg.phase_insens_hilbert)+isyes(cfg.phase_insens_filt)>1
-    error('too many phase insensitivity stages. You have to choose between phase_insens_hilbert or phase_insens_filt');
+% Phase insensitivity (MEP)
+if isfield(cfg, 'phase_insens_MEP')
+    if isyes(cfg.phase_insens_MEP)
+    end
+else
+    cfg.phase_insens_MEP = 'no';
+end
+
+
+if isyes(cfg.phase_insens_hilbert)+isyes(cfg.phase_insens_filt)+isyes(cfg.phase_insens_MEP)>1
+    error('too many phase insensitivity stages. You have to choose between phase_insens_hilbert, phase_insens_MEP or phase_insens_filt');
 end
 
 % Downsampling
@@ -859,7 +868,7 @@ if isyes(cfg.downsampling)
     end
     fs=fs/cfg.downsampling_factor;
     step.fs_outsig = fs;
-    if (isyes(cfg.mod_filterbank) || isyes(cfg.modS_filterbank))
+    if (isyes(cfg.mod_filterbank) || isyes(cfg.modS_filterbank) || isyes(cfg.modP_filterbank))
         outsig = outsig(1:cfg.downsampling_factor:end,:,:);
     else
         outsig = outsig(1:cfg.downsampling_factor:end,:);        

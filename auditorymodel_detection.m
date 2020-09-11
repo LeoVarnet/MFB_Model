@@ -58,6 +58,7 @@ end
 if isfield(cfg,'detect_PEMOcorrcoef') && isyes(cfg.detect_PEMOcorrcoef)
     for ialter = 1:Nalter
          cctemp = corrcoef(in{ialter}(:),template(:));
+         %cctemp = cov(in{ialter}(:),template(:));
          ir(ialter)=cctemp(1,2);
     end
    
@@ -65,11 +66,7 @@ if isfield(cfg,'detect_PEMOcorrcoef') && isyes(cfg.detect_PEMOcorrcoef)
 %     cc = sum(in.*repmat(template,1,size(in,2)));
 %     % now select the interval with the maximum standard deviation
     [~,interval] = max(ir);	% select cross power
-    % if another interval than the first has the max cross power, the interval is wrong, since work.signal always carries the
-    % signal interval in the first column
-%     if interval ~= 1
-%         interval = 0;
-%     end
+
 elseif isfield(cfg,'detect_PEMOeuclid') && isyes(cfg.detect_PEMOeuclid)
     for ialter = 1:Nalter
         ir(ialter)=sqrt(sum(sum(sum(in{ialter}(:)-template(:))^2)));
