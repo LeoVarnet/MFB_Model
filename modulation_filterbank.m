@@ -1,7 +1,8 @@
 function [ BB, AA, fmc, flim ] = modulation_filterbank( varargin )
 %[ BB, AA, fmc, flim ] = MODULATION_FILTERBANK ( fmin, fmax, fs, Qfactor )
+%or MODULATION_FILTERBANK ( fmin, fmax, fs, Nmod, Qfactor )
 %generates a bank of 1st order butterworth filters between fmin and fmax,
-%with an octave spacing
+%with an octave spacing (default: overlap at -3db)
 %can also be used as 
 %[ BB, AA, fmc, flim ] = MODULATION_FILTERBANK ( fmc, fs, Qfactor )
 %to generate a filterbank with specific center frequencies fmc
@@ -21,6 +22,16 @@ if nargin==4
     Qfactor = varargin{4};
     
     logfmc = log(fmin):log((sqrt(4*Qfactor^2+1)+1)/(sqrt(4*Qfactor^2+1)-1)):log(fmax);
+    fmc = exp(logfmc);
+end
+if nargin==5
+    fmin = varargin{1};
+    fmax = varargin{2};
+    fs = varargin{3};
+    Nmod = varargin{4};
+    Qfactor = varargin{5};
+    
+    logfmc = linspace(log(fmin), log(fmax), Nmod);%log(fmin):log((sqrt(4*Qfactor^2+1)+1)/(sqrt(4*Qfactor^2+1)-1)):log(fmax);
     fmc = exp(logfmc);
 end
 

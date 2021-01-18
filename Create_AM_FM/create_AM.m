@@ -45,14 +45,18 @@ elseif strcmp(carrier_waveform, 'square')
 end
 if strcmp(AM_waveform, 'sin')
     function_AM = @sin;
+elseif strcmp(AM_waveform, 'randsin')
+    function_AM = @(x)(sin(x)+2*pi*(2*rand(1)-1));
 elseif strcmp(AM_waveform, 'triangle')
     function_AM = @triangle;
 elseif strcmp(AM_waveform, 'square')
     function_AM = @square;
+else
+   error(['unknown AM function ' AM_waveform]) 
 end
 
 % generate t
-t = 0:(1/fs):duration;
+t = 1/fs:(1/fs):duration;
 
 % stim
 if ~strcmp(carrier_waveform, 'noise')

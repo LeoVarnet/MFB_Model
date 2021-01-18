@@ -7,10 +7,10 @@ function [ interval, ir, cfg ] = auditorymodel_detection( in, template, cfg )
 %   template: (matrix of size M x N x L)
 %   cfg: config sructure with field cfg.detect_PEMOcorrcoef
 %                                or cfg.detect_PEMOxcorr 
-%                                or cfg.decision_EPSM. 
+%                                or cfg.detect_EPSM. 
 %   Additional fields:
 %   cfg.detect_PEMOxcorr_limit (default : no limit) and
-%   cfg.decision_EPSM_threshold (default = 1 dB)
+%   cfg.detect_EPSM_threshold (default = 1 dB)
 % output:
 %   interval: number between 1 and n indicating which interval has been
 %   selected by the model 
@@ -18,7 +18,7 @@ function [ interval, ir, cfg ] = auditorymodel_detection( in, template, cfg )
 %   cfg: config structure as input with all unspecified parameters set to
 % default.
 %
-% Leo Varnet 2016 - last update : 2019
+% Leo Varnet 2016 - last update : 2020
 
 %% Model structure / load arguments
 
@@ -41,16 +41,16 @@ else
     cfg.detect_PEMOxcorr = 'no';
 end
 
-if isfield(cfg, 'decision_EPSM')
-    if isyes(cfg.decision_EPSM)
-        cfg = set_default_cfg(cfg, 'decision_EPSM_threshold', 1);
+if isfield(cfg, 'detect_EPSM')
+    if isyes(cfg.detect_EPSM)
+        cfg = set_default_cfg(cfg, 'detect_EPSM_threshold', 0);
     end
 else
-    cfg.decision_EPSM = 'no';
+    cfg.detect_EPSM = 'no';
 end
 
-if isyes(cfg.detect_PEMOcorrcoef)+isyes(cfg.detect_PEMOxcorr)+isyes(cfg.decision_EPSM)>1
-    error('too many decision devices selected. You have to choose between detect_PEMOcorrcoef, detect_PEMOxcorr or decision_EPSM');
+if isyes(cfg.detect_PEMOcorrcoef)+isyes(cfg.detect_PEMOxcorr)+isyes(cfg.detect_EPSM)>1
+    error('too many decision devices selected. You have to choose between detect_PEMOcorrcoef, detect_PEMOxcorr or detect_EPSM');
 end
 
 %% Decision device
@@ -58,6 +58,7 @@ end
 if isfield(cfg,'detect_PEMOcorrcoef') && isyes(cfg.detect_PEMOcorrcoef)
     for ialter = 1:Nalter
          cctemp = corrcoef(in{ialter}(:),template(:));
+         %cctemp = cov(in{ialter}(:),template(:));
          ir(ialter)=cctemp(1,2);
     end
    
@@ -65,11 +66,7 @@ if isfield(cfg,'detect_PEMOcorrcoef') && isyes(cfg.detect_PEMOcorrcoef)
 %     cc = sum(in.*repmat(template,1,size(in,2)));
 %     % now select the interval with the maximum standard deviation
     [~,interval] = max(ir);	% select cross power
-    % if another interval than the first has the max cross power, the interval is wrong, since work.signal always carries the
-    % signal interval in the first column
-%     if interval ~= 1
-%         interval = 0;
-%     end
+
 elseif isfield(cfg,'detect_PEMOeuclid') && isyes(cfg.detect_PEMOeuclid)
     for ialter = 1:Nalter
         ir(ialter)=sqrt(sum(sum(sum(in{ialter}(:)-template(:))^2)));
@@ -132,22 +129,48 @@ elseif isfield(cfg,'detect_PEMOxcorr') && isyes(cfg.detect_PEMOxcorr)
 %     if interval ~= 1
 %         interval = 0;
 %     end
-elseif isfield(cfg,'decision_EPSM') && isyes(cfg.decision_EPSM)
+elseif isfield(cfg,'detect_EPSM') && isyes(cfg.detect_EPSM)
     % compute envelope power
     for ialter = 1:Nalter
         Epow(ialter) = mean(in{ialter}(:).^2,1);
     end
     Epow_template = mean(template(:).^2,1);
-    %%% real EPSM
-%     ratio_Epow = 10*log10(Epow(1)/Epow(2));
-%     if ratio_Epow >= cfg.decision_EPSM_threshold
-%         interval=1;
-%     else
-%         interval=randi(2)-1;
-%     end
-%     ir = Epow;
-    %%% EPSM-like
-    [~,interval] = min(abs(Epow-Epow_template));
+    
+    
+        % in the case of EPSM, 'in' is not used and 'template' is the
+        % internal representation to be analyzed. Furthermore, the
+        % target-present response is assumed to be 2
+        ratio_Epow = 10*log10(Epow_template);%10*log10(Epow(1)/Epow(2));
+        if ratio_Epow >= cfg.detect_EPSM_threshold
+            interval = 2;
+        else
+            interval = 1; %randi(2)-1;
+        end
+        ir = Epow;
+        
+%         %%% correlation-based EPSM
+%         [~,interval] = min(abs(Epow-Epow_template));
+elseif isfield(cfg,'detect_PEMOthreshold') && isyes(cfg.detect_PEMOthreshold)
+    % in the case of PEMO_threshold, 'template' is the internal
+    % representation to be analyzed by correlation with 'in{2}'.
+    % Furthermore, the target-present response is assumed to be 2
+    if Nalter~=1
+        %error('detect_PEMOthreshold requires one single interval');
+    end
+    cctemp = xcorr(in{2}(:),template(:));
+    r = max(cctemp);
+    %cctemp = corrcoef(in{2}(:),template(:));
+    %r=cctemp(1,2);
+    if r >= cfg.detect_PEMOthreshold_r
+        interval = 2;
+    else
+        interval = 1; %randi(2)-1;
+    end
+    %     % xcorr of internal representation and template
+    %     cc = sum(in.*repmat(template,1,size(in,2)));
+    %     % now select the interval with the maximum standard deviation
+    ir = r;% [~,interval] = max(ir);	% select cross power
+    
 end
 
 end

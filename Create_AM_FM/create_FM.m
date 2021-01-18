@@ -51,7 +51,7 @@ elseif strcmp(FM_waveform, 'square')
 end
 
 % generate t
-t = 0:(1/fs):duration;
+t = 1/fs:(1/fs):duration;
 
 % stim
 stim = function_carrier(2*pi*fc*t+(-1)*FM_depth*function_FM(2*pi*FM_fm*t+3*pi/2));

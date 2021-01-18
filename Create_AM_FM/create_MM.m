@@ -48,7 +48,7 @@ elseif strcmp(AM_waveform, 'square')
 end
 
 % generate t
-t = 0:(1/fs):duration;
+t = 1/fs:(1/fs):duration;
 
 % stim
 FM_stim = create_FM( fc, FM_fm, FM_depth, duration, fs, carrier_waveform, FM_waveform );
