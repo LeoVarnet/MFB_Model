@@ -37,7 +37,7 @@ end
 
 for ichan = 1:length(fmc)
     flim(ichan,:) = fmc(ichan)*sqrt(4+1/Qfactor^2)/2 +  [-1 +1]*fmc(ichan)/Qfactor/2; %sqrt((fmc(ichan)/Qfactor)^2+8*fmc(ichan))/2 + [-1 +1]*(fmc(ichan)/(2*Qfactor));% [fmc(ichan)*((sqrt(5)-(1/Qfactor))/2) fc(ichan)*((sqrt(5)+(1/Qfactor))/2)];
-    [BB(ichan,:),AA(ichan,:)] = butter(2,2*[flim(ichan,:)]/fs);%butter(1,2*[flim(ichan,:)]/fs);
+    [BB(ichan,:),AA(ichan,:)] = butter(2,2*[flim(ichan,:)]/fs);%butter(1,2*[flim(ichan,:)]/fs);%
 end
 
 % if isempty(varargin) || isempty(varargin{1})

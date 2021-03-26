@@ -1,5 +1,5 @@
 %% Example of auditory model initialisation
-% Leo Varnet - 2018
+% Leo Varnet 2018 - last update: 2020
     
 close all
 clear cfg
@@ -8,7 +8,7 @@ fs = 44100;
 %% display settings
 
 cfg.verbose = 'yes'; % details of the computation with process time for each step
-cfg.display_step = 'yes'; % automatically plot the results for each step
+cfg.display_step = 'no'; % automatically plot the results for each step
 cfg.display_out = 'no'; % plot the model output
 cfg.channels2plot = 1:5;
  
@@ -75,13 +75,15 @@ cfg.intnoise_addstd = 1;
 % WARNING : In development. All options are not fully available. Please use
 % detect_PEMOxcorr_limit (detection by template matching)
 
-cfg.detect_PEMOxcorr = 'yes';
+%cfg.detect_PEMOxcorr = 'yes';
 %cfg.detect_PEMOxcorr_limit = ((1/cfg.stim_fm)*(fs/cfg.downsampling_factor))/2;
+cfg.detect_maxlag = 10000;
 
 %% Generating the template (non-noisy representation of the target)
 
 cfg_temp = cfg;
 cfg_temp.intnoise = 'no';
+%cfg_temp.stim_M_waveform = 'randsin';
 [ template, step ] = auditorymodel([], fs, cfg_temp);
 
 %% Generating internal representations for the target and non-target intervals
@@ -93,7 +95,7 @@ cfg.stim_Mdepth=0;
 
 %% Detecting the target
 
-[ interval, ir ] = auditorymodel_detection( {target, nontarget}, template, cfg );
+[ interval, ir ] = auditorymodel_TMdetect( {target, nontarget}, template, cfg );
 
 answer = {'correct', 'incorrect'};
 fprintf(['The interval selected is ' num2str(interval) ' (' answer{interval} ' answer)\n']);

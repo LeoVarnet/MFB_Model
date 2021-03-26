@@ -670,7 +670,7 @@ if isyes(cfg.mod_filterbank)
     end
     
     if isyes(cfg.modbank_LPfilter)
-        [B, A] = butter(6,2*(100/fs)); % [B,A] = butter(1,2*(150/fs));%
+        [B, A] = butter(1,2*(150/fs));%
         outsig = filter(B,A,outsig);
     end
     
